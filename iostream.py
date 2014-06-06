@@ -2,9 +2,13 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 12:26:45>
+# Time-stamp: <2014-06-06 Fri 15:05:19>
 
 import collections
+import errno
+import socket
+
+_ERRNO_WOULDBLOCK = (errno.EWOULDBLOCK, errno.EAGAIN)
 
 class BaseIOStream(object):
     def __init__(self, io_loop=None, max_buffer_size=None,
@@ -29,3 +33,20 @@ class IOStream(BaseIOStream):
 
     def fileno(self):
         return self._socket.fileno()
+
+    def close_fd(self):
+        self._socket.close()
+        self._socket = None
+
+    def read_from_fd(self):
+        try:
+            chunk = self._socket.recv(self._read_chunk_size)
+        except socket.error as e:
+            if e.args[0] in _ERRNO_WOULDBLOCK:
+                return None
+            else:
+                raise
+        if not chunk:
+            self.close_fd()
+            return None
+        return chunk

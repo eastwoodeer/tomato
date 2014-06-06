@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: ioloop.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 12:28:51>
+# Time-stamp: <2014-06-06 Fri 16:39:20>
 
 import threading
 
@@ -72,8 +72,13 @@ class PollIOLoop(IOLoop):
         self._handlers[fd] = handler
         self._impl.register(fd, events | self.ERROR)
 
-    def remove_handler(self):
-        pass
+    def remove_handler(self, fd):
+        self._handlers.pop(fd, None)
+        self._events.pop(fd, None)
+        try:
+            self._impl.unregister(fd)
+        except Exception as e:
+            print("error delete fd from ioloop...", e)
 
     def start(self):
         poll_timeout = _POLL_TIMEOUT
@@ -83,7 +88,6 @@ class PollIOLoop(IOLoop):
             while True:
                 try:
                     event_pairs = self._impl.poll(poll_timeout)
-                    print(event_pairs)
                 except Exception as e:
                     print('error: ', e)
                     break

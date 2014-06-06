@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: tcpserver.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 12:27:02>
+# Time-stamp: <2014-06-06 Fri 14:24:45>
 
 import time
 
@@ -31,13 +31,12 @@ class TCPServer(object):
     def add_socket(self, socket):
         self.add_sockets([socket])
 
-    def handle_stream(self, stream):
+    def handle_stream(self, stream, address):
         raise NotImplementedError()
 
     def _handle_connection(self, connection, address):
-        print('new connecting......: ', connection, address)
-        stream = IOStream(connection, address)
-        self.handle_stream(stream)
+        stream = IOStream(connection)
+        self.handle_stream(stream, address)
 
 if __name__ == '__main__':
     server = TCPServer()

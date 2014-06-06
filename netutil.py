@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: netutil.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 11:11:32>
+# Time-stamp: <2014-06-06 Fri 16:13:37>
 
 import socket
 import errno

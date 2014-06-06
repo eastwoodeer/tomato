@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 15:05:19>
+# Time-stamp: <2014-06-06 Fri 17:16:55>
 
 import collections
 import errno
@@ -18,12 +18,25 @@ class BaseIOStream(object):
         self._read_chunk_size = read_chunk_size
         self._read_buffer = collections.deque()
         self._write_buffer = collections.deque()
+        self._closed = False
 
     def fileno(self):
         raise NotImplementedError()
 
     def read_from_fd(self):
-       raise NotImplementedError()
+        raise NotImplementedError()
+
+    def closed(self):
+        return self._closed
+
+    def close_fd(self):
+        raise NotImplementedError()
+
+    def close(self):
+        if not self.closed():
+            self.close_fd()
+            self._closed = True
+   
 
 class IOStream(BaseIOStream):
     def __init__(self, socket, *args, **kwargs):
@@ -47,6 +60,6 @@ class IOStream(BaseIOStream):
             else:
                 raise
         if not chunk:
-            self.close_fd()
+            self.close()
             return None
         return chunk

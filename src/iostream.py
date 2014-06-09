@@ -2,13 +2,17 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-09 Mon 09:27:02>
+# Time-stamp: <2014-06-09 Mon 15:57:21>
 
 import collections
 import errno
 import socket
 
 _ERRNO_WOULDBLOCK = (errno.EWOULDBLOCK, errno.EAGAIN)
+
+# These errnos indicate that a connection has been abruptly terminated.
+# They should be caught and handled less noisily than other errors.
+_ERRNO_CONNRESET = (errno.ECONNRESET, errno.ECONNABORTED, errno.EPIPE)
 
 class BaseIOStream(object):
     def __init__(self, io_loop=None, max_buffer_size=None,
@@ -17,12 +21,18 @@ class BaseIOStream(object):
         self._max_buffer_size = max_buffer_size or 100*1024*1024
         self._read_chunk_size = read_chunk_size
         self._read_buffer = collections.deque()
+        self._read_buffer_size = 0
         self._write_buffer = collections.deque()
+        self._read_callback = None
+        self._read_delimiter = None
         self._closed = False
 
     def fileno(self):
         raise NotImplementedError()
 
+    def write_to_fd(self):
+        raise NotImplementedError()
+    
     def read_from_fd(self):
         raise NotImplementedError()
 
@@ -36,8 +46,82 @@ class BaseIOStream(object):
         if not self.closed():
             self.close_fd()
             self._closed = True
-   
 
+    def read_until(self, delimiter, callback):
+        self._set_read_callback(callback)
+        self._read_delimiter = delimiter
+        self._try_inline_read()
+
+    def _set_read_callback(self, callback):
+        assert not self._read_callback, 'Already reading...'
+        self._read_callback = callback
+        
+    def _try_inline_read(self):
+        if self._read_from_buffer():
+            return
+        try:
+            while not self.closed():
+                if self._read_to_buffer() == 0:
+                    break
+        except Exception:
+            print('try_inline_read')
+            raise
+        if self._read_from_buffer():
+            return
+        self._maybe_add_error_listener()
+
+    def _maybe_add_error_listener(self):
+        print('_maybe_add_error_listener(self)')
+
+    def _read_to_buffer(self):
+        try:
+            chunk = self.read_from_fd()
+        except (socket.error, IOError, OSError) as e:
+            print('read_to_buffer:', e)
+            if e.args[0] in _ERRNO_CONNRESET:
+                return
+            raise
+        if chunk is None:
+            return 0
+        self._read_buffer.append(chunk)
+        self._read_buffer_size += len(chunk)
+        if self._read_buffer_size > self._max_buffer_size:
+            print('buffer exceed')
+            self.close()
+            raise IOError('reached maxium read buffer size')
+        return len(chunk)
+
+    def _read_from_buffer(self):
+        if self._read_delimiter is not None:
+            # print(self._read_buffer)
+            if self._read_buffer:
+                while True:
+                    loc = self._read_buffer[0].find(self._read_delimiter)
+                    if loc != -1:
+                        callback = self._read_callback
+                        delimiter_len = len(self._read_delimiter)
+                        self._read_delimiter = None
+                        self._read_callback = None
+                        s = self._consume(loc + delimiter_len)
+                        print('--->', s)
+                        self._run_callback()
+                        return True
+                    if len(self._read_buffer) == 1:
+                        break
+                    _double_prefix(self._read_buffer)
+        return False
+
+    def _run_callback(self):
+        print('run callback to handle read_until')
+
+    def _consume(self, loc):
+        if loc == 0:
+            return b''
+        _merge_prefix(self._read_buffer, loc)
+        self._read_buffer_size -= loc
+        return self._read_buffer.popleft()
+
+        
 class IOStream(BaseIOStream):
     def __init__(self, socket, *args, **kwargs):
         self._socket = socket
@@ -63,3 +147,26 @@ class IOStream(BaseIOStream):
             self.close()
             return None
         return chunk
+
+
+def _double_prefix(deque):
+    new_len = max(len(deque[0]) * 2,
+                  len(deque[0]) + len(deque[1]))
+    _merge_prefix(deque, new_len)
+
+def _merge_prefix(deque, size):
+    if len(deque) == 1 and len(deque[0]) <= size:
+        return
+    remaining = size
+    prefix = []
+    while deque and remaining:
+        chunk = deque.popleft()
+        if len(chunk) > remaining:
+            deque.appendleft(chunk[remaining:])
+            chunk = chunk[:remaining]
+        prefix.append(chunk)
+        remaining -= len(chunk)
+    if prefix:
+        deque.appendleft(type(prefix[0])().join(prefix))
+    else:
+        deque.appendleft(b'')

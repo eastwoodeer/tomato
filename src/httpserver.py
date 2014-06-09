@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: httpserver.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 16:39:43>
+# Time-stamp: <2014-06-09 Mon 15:57:26>
 
 from tcpserver import TCPServer
 from ioloop import IOLoop
@@ -22,12 +22,12 @@ class HTTPConnection(object):
         self._address = address
         self._request_callback = request_callback
 
-        s = self._stream.read_from_fd()                
-        if s is None:
-            IOLoop.current().add_handler(self._stream.fileno(),
-                                      self.read_handler, IOLoop.READ)
-        else:
-            print(s)
+        s = self._stream.read_until(b'\r\n', None)
+        # if s is None:
+        #     IOLoop.current().add_handler(self._stream.fileno(),
+        #                                  self.read_handler, IOLoop.READ)
+        # else:
+        #     print(s)
 
     def read_handler(self, fd, events):
         s = self._stream.read_from_fd()

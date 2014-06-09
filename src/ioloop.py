@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: ioloop.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 16:39:20>
+# Time-stamp: <2014-06-09 Mon 15:23:20>
 
 import threading
 
@@ -95,10 +95,11 @@ class PollIOLoop(IOLoop):
                 self._events.update(event_pairs)
                 while self._events:
                     fd, events = self._events.popitem()
-                    try:
-                        self._handlers[fd](fd, events)
-                    except Exception as e:
-                        print('handlers exception...', e)
+                    self._handlers[fd](fd, events)
+                    # try:
+                    #     self._handlers[fd](fd, events)
+                    # except Exception as e:
+                    #     print('handlers exception...', e)
         finally:
             IOLoop._current.instance = old_current
             print('end of the world')

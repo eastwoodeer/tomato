@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: tcpserver.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 14:24:45>
+# Time-stamp: <2014-06-09 Mon 17:06:56>
 
 import time
 
@@ -35,7 +35,7 @@ class TCPServer(object):
         raise NotImplementedError()
 
     def _handle_connection(self, connection, address):
-        stream = IOStream(connection)
+        stream = IOStream(connection, self._io_loop)
         self.handle_stream(stream, address)
 
 if __name__ == '__main__':

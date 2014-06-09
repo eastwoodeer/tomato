@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-09 Mon 15:57:21>
+# Time-stamp: <2014-06-09 Mon 17:08:42>
 
 import collections
 import errno
 import socket
+
+import ioloop
 
 _ERRNO_WOULDBLOCK = (errno.EWOULDBLOCK, errno.EAGAIN)
 
@@ -26,6 +28,7 @@ class BaseIOStream(object):
         self._read_callback = None
         self._read_delimiter = None
         self._closed = False
+        self._state = None
 
     def fileno(self):
         raise NotImplementedError()
@@ -71,7 +74,48 @@ class BaseIOStream(object):
         self._maybe_add_error_listener()
 
     def _maybe_add_error_listener(self):
-        print('_maybe_add_error_listener(self)')
+        if self._state is None:
+            if self.closed():
+                print('already closed')
+            else:
+                self._add_io_state(ioloop.IOLoop.READ)
+
+    def _add_io_state(self, state):
+        if self.closed():
+            return
+        if self._state is None:
+            self._state = ioloop.IOLoop.ERROR | state
+            self._io_loop.add_handler(self.fileno(), self._handle_events,
+                                      self._state)
+        else:
+            self._state = self._state | state
+            self._io_loop.update_handler(self.fileno(), self._state)
+
+    def _handle_events(self, fd, events):
+        print('handle_events')
+        if self.closed():
+            print('error: already closed')
+            return
+        try:
+            if events & self._io_loop.READ:
+                self._handle_read()
+            if self.closed():
+                return
+        except Exception:
+            print('handle events exception...')
+            self.close()
+
+    def _handle_read(self):
+        try:
+            while not self.closed():
+                if self._read_to_buffer() == 0:
+                    break
+        except Exception:
+            print('handle_read exception')
+            self.close()
+            return
+        if self._read_from_buffer():
+            return
 
     def _read_to_buffer(self):
         try:
@@ -103,7 +147,7 @@ class BaseIOStream(object):
                         self._read_delimiter = None
                         self._read_callback = None
                         s = self._consume(loc + delimiter_len)
-                        print('--->', s)
+                        print('--->', s, '<---\n')
                         self._run_callback()
                         return True
                     if len(self._read_buffer) == 1:

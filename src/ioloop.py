@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: ioloop.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-09 Mon 15:23:20>
+# Time-stamp: <2014-06-09 Mon 16:47:35>
 
 import threading
 
@@ -71,6 +71,9 @@ class PollIOLoop(IOLoop):
     def add_handler(self, fd, handler, events):
         self._handlers[fd] = handler
         self._impl.register(fd, events | self.ERROR)
+
+    def update_handler(self, fd, events):
+        self._impl.modify(fd, events | self.ERROR)
 
     def remove_handler(self, fd):
         self._handlers.pop(fd, None)

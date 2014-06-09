@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: httpserver.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-09 Mon 15:57:26>
+# Time-stamp: <2014-06-09 Mon 17:02:12>
 
 from tcpserver import TCPServer
 from ioloop import IOLoop
@@ -35,6 +35,6 @@ class HTTPConnection(object):
         print('-->', s)
 
 if __name__ == '__main__':
-    server = HTTPServer(None)
+    server = HTTPServer(None, io_loop=IOLoop.current())
     server.listen(9999)
     IOLoop.instance().start()

@@ -1,8 +1,8 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-06 Fri 17:16:55>
+# Time-stamp: <2014-06-09 Mon 09:27:02>
 
 import collections
 import errno

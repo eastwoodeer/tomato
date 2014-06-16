@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-09 Mon 17:08:42>
+# Time-stamp: <2014-06-10 Tue 11:26:25>
 
 import collections
 import errno
@@ -47,6 +47,9 @@ class BaseIOStream(object):
 
     def close(self):
         if not self.closed():
+            if self._state is not None:
+                self._io_loop.remove_handler(self.fileno())
+                self._state = None
             self.close_fd()
             self._closed = True
 
@@ -104,6 +107,7 @@ class BaseIOStream(object):
         except Exception:
             print('handle events exception...')
             self.close()
+            raise
 
     def _handle_read(self):
         try:
@@ -137,7 +141,6 @@ class BaseIOStream(object):
 
     def _read_from_buffer(self):
         if self._read_delimiter is not None:
-            # print(self._read_buffer)
             if self._read_buffer:
                 while True:
                     loc = self._read_buffer[0].find(self._read_delimiter)
@@ -146,17 +149,25 @@ class BaseIOStream(object):
                         delimiter_len = len(self._read_delimiter)
                         self._read_delimiter = None
                         self._read_callback = None
-                        s = self._consume(loc + delimiter_len)
-                        print('--->', s, '<---\n')
-                        self._run_callback()
+                        self._run_callback(callback,
+                                           self._consume(loc + delimiter_len))
                         return True
                     if len(self._read_buffer) == 1:
                         break
                     _double_prefix(self._read_buffer)
         return False
 
-    def _run_callback(self):
-        print('run callback to handle read_until')
+    def _run_callback(self, callback, *args):
+        def wrapper():
+            try:
+                callback(*args)
+            except:
+                print('iostream._run_callback exception.')
+                self.close()
+                raise
+            self._maybe_add_error_listener()
+        self._io_loop.add_callback(wrapper)
+            
 
     def _consume(self, loc):
         if loc == 0:

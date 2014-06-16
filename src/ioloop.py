@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 # Filename: ioloop.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-09 Mon 16:47:35>
+# Time-stamp: <2014-06-10 Tue 11:26:29>
 
 import threading
+import functools
 
 from util import Configurable
 
@@ -53,7 +54,13 @@ class IOLoop(Configurable):
     def add_handler(self, fd, handler, events):
         raise NotImplementedError()
 
+    def update_handler(self, fd, events):
+        raise NotImplementedError()
+    
     def remove_handler(self, fd):
+        raise NotImplementedError()
+
+    def add_callback(self, callback, *args, **kwargs):
         raise NotImplementedError()
 
     def start(self):
@@ -67,6 +74,8 @@ class PollIOLoop(IOLoop):
         self._impl = impl
         self._events = {}
         self._handlers = {}
+        self._callbacks = []
+        self._callback_lock = threading.Lock()
 
     def add_handler(self, fd, handler, events):
         self._handlers[fd] = handler
@@ -83,12 +92,28 @@ class PollIOLoop(IOLoop):
         except Exception as e:
             print("error delete fd from ioloop...", e)
 
+    def add_callback(self, callback, *args, **kwargs):
+        with self._callback_lock:
+            self._callbacks.append(functools.partial(callback, *args, **kwargs))
+
+    def _run_callback(self, callback):
+        try:
+            callback()
+        except:
+            print('callback error')
+
     def start(self):
         poll_timeout = _POLL_TIMEOUT
         old_current = getattr(IOLoop._current, 'instance', None)
         IOLoop._current.instance = self
         try:
             while True:
+                with self._callback_lock:
+                    callbacks = self._callbacks
+                    self._callbacks = []
+                for callback in callbacks:
+                    self._run_callback(callback)
+                
                 try:
                     event_pairs = self._impl.poll(poll_timeout)
                 except Exception as e:
@@ -98,11 +123,11 @@ class PollIOLoop(IOLoop):
                 self._events.update(event_pairs)
                 while self._events:
                     fd, events = self._events.popitem()
-                    self._handlers[fd](fd, events)
-                    # try:
-                    #     self._handlers[fd](fd, events)
-                    # except Exception as e:
-                    #     print('handlers exception...', e)
+                    try:
+                        self._handlers[fd](fd, events)
+                    except Exception as e:
+                        print('handlers exception...', e)
+                        raise
         finally:
             IOLoop._current.instance = old_current
             print('end of the world')

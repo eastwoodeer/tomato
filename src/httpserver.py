@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 # Filename: httpserver.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-16 Mon 15:16:38>
+# Time-stamp: <2014-06-17 Tue 17:14:32>
 
 import time
 
+from httputil import HTTPHeader
 from tcpserver import TCPServer
 from ioloop import IOLoop
 
@@ -56,7 +57,13 @@ class HTTPConnection(object):
             start_line = data[:eol]
             try:
                 method, uri, version = start_line.split(' ')
-            except:
+                try:
+                    headers = HTTPHeader.parse(data[eol:])
+                except ValueError as e:
+                    print(e)
+                    raise
+            except Exception as e:
+                print(e)
                 raise
             if not version.startswith('HTTP/'):
                 print('error http version')
@@ -65,7 +72,19 @@ class HTTPConnection(object):
             raise
         print(method, uri, version, self._address)
         remote_ip = self._address[0]
-        
+
+        content_length = headers.get('Content-Length')
+        if content_length:
+            print('????', content_length)
+            content_length = int(content_length)
+            # if content_length > self._stream.max_buffer_size:
+            #     print('Content-Length too long')
+            #     raise
+            print('call read_bytes')
+            self._stream.read_bytes(content_length, self._on_request_body)
+            
+    def _on_request_body(self, data):
+        print(data)
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-10 Tue 11:26:25>
+# Time-stamp: <2014-06-17 Tue 17:27:01>
 
 import collections
 import errno
@@ -24,6 +24,7 @@ class BaseIOStream(object):
         self._read_chunk_size = read_chunk_size
         self._read_buffer = collections.deque()
         self._read_buffer_size = 0
+        self._read_bytes = None
         self._write_buffer = collections.deque()
         self._read_callback = None
         self._read_delimiter = None
@@ -58,9 +59,14 @@ class BaseIOStream(object):
         self._read_delimiter = delimiter
         self._try_inline_read()
 
+    def read_bytes(self, num_bytes, callback):
+        self._set_read_callback(callback)
+        self._read_bytes = num_bytes
+        self._try_inline_read()
+
     def _set_read_callback(self, callback):
         assert not self._read_callback, 'Already reading...'
-        self._read_callback = callback
+        self._read_callback = callback        
         
     def _try_inline_read(self):
         if self._read_from_buffer():
@@ -140,7 +146,14 @@ class BaseIOStream(object):
         return len(chunk)
 
     def _read_from_buffer(self):
-        if self._read_delimiter is not None:
+        if self._read_bytes is not None and self._read_buffer_size >= self._read_bytes:
+            num_bytes = self._read_bytes
+            callback = self._read_callback
+            self._read_bytes = None
+            self._read_callback = None
+            self._run_callback(callback, self._consume(num_bytes))
+            return True
+        elif self._read_delimiter is not None:
             if self._read_buffer:
                 while True:
                     loc = self._read_buffer[0].find(self._read_delimiter)

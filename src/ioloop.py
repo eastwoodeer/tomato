@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: ioloop.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-10 Tue 11:26:29>
+# Time-stamp: <2014-06-18 Wed 17:03:01>
 
 import threading
 import functools
@@ -102,17 +102,22 @@ class PollIOLoop(IOLoop):
         except:
             print('callback error')
 
-    def start(self):
-        poll_timeout = _POLL_TIMEOUT
+    def start(self):        
         old_current = getattr(IOLoop._current, 'instance', None)
         IOLoop._current.instance = self
         try:
             while True:
+                poll_timeout = _POLL_TIMEOUT
                 with self._callback_lock:
                     callbacks = self._callbacks
                     self._callbacks = []
                 for callback in callbacks:
                     self._run_callback(callback)
+
+               # self._run_callback may add callback again,
+               # set timeout to 0, run callback again
+                if self._callbacks:
+                    poll_timeout = 0.0
                 
                 try:
                     event_pairs = self._impl.poll(poll_timeout)

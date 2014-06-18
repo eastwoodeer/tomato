@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-17 Tue 17:27:01>
+# Time-stamp: <2014-06-18 Wed 17:00:04>
 
 import collections
 import errno
@@ -145,7 +145,7 @@ class BaseIOStream(object):
             raise IOError('reached maxium read buffer size')
         return len(chunk)
 
-    def _read_from_buffer(self):
+    def _read_from_buffer(self):        
         if self._read_bytes is not None and self._read_buffer_size >= self._read_bytes:
             num_bytes = self._read_bytes
             callback = self._read_callback

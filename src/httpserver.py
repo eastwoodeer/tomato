@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: httpserver.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-17 Tue 17:14:32>
+# Time-stamp: <2014-06-18 Wed 17:05:56>
 
 import time
 
@@ -59,6 +59,7 @@ class HTTPConnection(object):
                 method, uri, version = start_line.split(' ')
                 try:
                     headers = HTTPHeader.parse(data[eol:])
+                    print(headers)
                 except ValueError as e:
                     print(e)
                     raise
@@ -75,16 +76,14 @@ class HTTPConnection(object):
 
         content_length = headers.get('Content-Length')
         if content_length:
-            print('????', content_length)
             content_length = int(content_length)
             # if content_length > self._stream.max_buffer_size:
             #     print('Content-Length too long')
             #     raise
-            print('call read_bytes')
             self._stream.read_bytes(content_length, self._on_request_body)
             
     def _on_request_body(self, data):
-        print(data)
+        print('request body:', data)
 
 
 if __name__ == '__main__':

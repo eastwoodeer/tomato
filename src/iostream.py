@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-08-15 Fri 11:27:00>
+# Time-stamp: <2014-08-15 Fri 14:19:04>
 
 import collections
 import errno
@@ -39,7 +39,7 @@ class BaseIOStream(object):
 
     def write_to_fd(self):
         raise NotImplementedError()
-    
+
     def read_from_fd(self):
         raise NotImplementedError()
 
@@ -69,8 +69,8 @@ class BaseIOStream(object):
 
     def _set_read_callback(self, callback):
         assert not self._read_callback, 'Already reading...'
-        self._read_callback = callback        
-        
+        self._read_callback = callback
+
     def _try_inline_read(self):
         if self._read_from_buffer():
             return
@@ -148,7 +148,7 @@ class BaseIOStream(object):
             raise IOError('reached maxium read buffer size')
         return len(chunk)
 
-    def _read_from_buffer(self):        
+    def _read_from_buffer(self):
         if self._read_bytes is not None and self._read_buffer_size >= self._read_bytes:
             num_bytes = self._read_bytes
             callback = self._read_callback
@@ -183,7 +183,7 @@ class BaseIOStream(object):
                 raise
             self._maybe_add_error_listener()
         self._io_loop.add_callback(wrapper)
-            
+
 
     def _consume(self, loc):
         if loc == 0:
@@ -192,7 +192,7 @@ class BaseIOStream(object):
         self._read_buffer_size -= loc
         return self._read_buffer.popleft()
 
-        
+
 class IOStream(BaseIOStream):
     def __init__(self, socket, *args, **kwargs):
         self._socket = socket
@@ -226,6 +226,23 @@ def _double_prefix(deque):
     _merge_prefix(deque, new_len)
 
 def _merge_prefix(deque, size):
+    """Replace the first entries in a deque of strings with a single
+    string of up to size bytes.
+
+    >>> d = collections.deque(['abc', 'de', 'fghi', 'j'])
+    >>> _merge_prefix(d, 5); print(d)
+    deque(['abcde', 'fghi', 'j'])
+
+    Strings will be split as necessary to reach the desired size.
+    >>> _merge_prefix(d, 7); print(d)
+    deque(['abcdefg', 'hi', 'j'])
+
+    >>> _merge_prefix(d, 3); print(d)
+    deque(['abc', 'defg', 'hi', 'j'])
+
+    >>> _merge_prefix(d, 100); print(d)
+    deque(['abcdefghij'])
+    """
     if len(deque) == 1 and len(deque[0]) <= size:
         return
     remaining = size
@@ -241,3 +258,7 @@ def _merge_prefix(deque, size):
         deque.appendleft(type(prefix[0])().join(prefix))
     else:
         deque.appendleft(b'')
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()

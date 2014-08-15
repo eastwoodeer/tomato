@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: httpserver.py
 # Author:   Chenbin
-# Time-stamp: <2014-08-15 Fri 11:27:10>
+# Time-stamp: <2014-08-15 Fri 15:53:51>
 
 import time
 
@@ -21,6 +21,7 @@ class HTTPRequest(object):
         self._start_time = time.time()
         self._finish_time = None
         self._remote_ip = remote_ip
+        self._body = body or ''
 
     def finish(self):
         self._connection.close()
@@ -36,12 +37,13 @@ class HTTPServer(TCPServer):
     def handle_stream(self, stream, address):
         HTTPConnection(stream, address, self._request_callback)
 
-        
+
 class HTTPConnection(object):
     def __init__(self, stream, address, request_callback):
         self._stream = stream
         self._address = address
         self._request_callback = request_callback
+        self._request = None
 
         s = self._stream.read_until(b'\r\n\r\n', self._on_header)
 
@@ -59,7 +61,7 @@ class HTTPConnection(object):
                 method, uri, version = start_line.split(' ')
                 try:
                     headers = HTTPHeader.parse(data[eol:])
-                    print(headers)
+                    print('headers: %s' % headers)
                 except ValueError as e:
                     print(e)
                     raise
@@ -74,6 +76,9 @@ class HTTPConnection(object):
         print(method, uri, version, self._address)
         remote_ip = self._address[0]
 
+        self._request = HTTPRequest(
+            connection=self, method=method, uri=uri,
+            version=version, headers=headers, remote_ip=remote_ip)
         content_length = headers.get('Content-Length')
         if content_length:
             content_length = int(content_length)
@@ -81,9 +86,12 @@ class HTTPConnection(object):
                 print('Content-Length too long')
                 raise
             self._stream.read_bytes(content_length, self._on_request_body)
-            
+
     def _on_request_body(self, data):
-        print('request body:', data)
+        print('request body: %s' % data)
+        self._request.body = data
+        if self._request_callback:
+            self._request_callback(self._request)
 
 
 if __name__ == '__main__':

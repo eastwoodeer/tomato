@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: httpserver.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-18 Wed 17:05:56>
+# Time-stamp: <2014-08-15 Fri 11:27:10>
 
 import time
 
@@ -77,9 +77,9 @@ class HTTPConnection(object):
         content_length = headers.get('Content-Length')
         if content_length:
             content_length = int(content_length)
-            # if content_length > self._stream.max_buffer_size:
-            #     print('Content-Length too long')
-            #     raise
+            if content_length > self._stream.max_buffer_size():
+                print('Content-Length too long')
+                raise
             self._stream.read_bytes(content_length, self._on_request_body)
             
     def _on_request_body(self, data):

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Filename: iostream.py
 # Author:   Chenbin
-# Time-stamp: <2014-06-18 Wed 17:00:04>
+# Time-stamp: <2014-08-15 Fri 11:27:00>
 
 import collections
 import errno
@@ -30,6 +30,9 @@ class BaseIOStream(object):
         self._read_delimiter = None
         self._closed = False
         self._state = None
+
+    def max_buffer_size(self):
+        return self._max_buffer_size
 
     def fileno(self):
         raise NotImplementedError()
